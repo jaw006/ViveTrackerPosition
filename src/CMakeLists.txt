@@ -1,0 +1,2 @@
+add_executable(ViveTrackerPos main.cpp)
+target_link_libraries(ViveTrackerPos PUBLIC openvr)
