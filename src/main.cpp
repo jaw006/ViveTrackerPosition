@@ -42,6 +42,23 @@ namespace vtp
         }
         return propString;
     }
+
+    // +y is up, +x is right, -z is forward, units are meters
+    // According to https://github.com/ValveSoftware/openvr/issues/689 ,
+    // [X1 Y1 Z1 P1]
+    // [X2 Y2 Z2 P2]
+    // [X3 Y3 Z3 P3]
+    // Where P is position vector
+    std::string matrix34toString(vr::HmdMatrix34_t& m)
+    {
+        // Returns m.m[col][row] followed by a comma
+        auto mn = [&](auto col, auto row) { return std::to_string(m.m[col][row]) + ","; };
+        return
+            mn(0, 0) + mn(0, 1) + mn(0, 2) + mn(0, 3) + "\n" +
+            mn(1, 0) + mn(1, 1) + mn(1, 2) + mn(1, 3) + "\n" +
+            mn(2, 0) + mn(2, 1) + mn(2, 2) + mn(2, 3) + "\n" +
+            "0.0, 0.0, 0.0, 1.0";
+    }
 }
 
 int main(int argc, char* argv)
@@ -84,6 +101,26 @@ int main(int argc, char* argv)
             std::cout << getPropString("TrackingSystemName: ", Prop_TrackingSystemName_String);
             std::cout << getPropString("ModelNumber: ",        Prop_ModelNumber_String );
             std::cout << getPropString("SerialNumber: ",       Prop_SerialNumber_String);
+
+        // Get controller poses
+            vr::VRControllerState_t state;
+            vr::TrackedDevicePose_t pose;
+            bool gotPose = system_->GetControllerStateWithPose(
+                vr::ETrackingUniverseOrigin::TrackingUniverseStanding,
+                trackerIdx,
+                &state,
+                1,
+                &pose
+            );
+            if (!gotPose)
+            {
+                std::cout << "Failed to get pose";
+            }
+            else
+            {
+                std::cout << "PoseIsValid: " + std::to_string(pose.bPoseIsValid) << std::endl;
+                std::cout << "Pose:\n" + vtp::matrix34toString(pose.mDeviceToAbsoluteTracking) << std::endl;
+            }
         }
         else
         {
