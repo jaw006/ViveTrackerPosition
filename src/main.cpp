@@ -1,7 +1,6 @@
 #include <vector>
 #include <iostream>
 #include "openvr.h"
-#include "main.h"
 
 namespace vtp
 {
