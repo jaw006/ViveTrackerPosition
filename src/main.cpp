@@ -77,16 +77,19 @@ int main(int argc, char* argv)
         std::cout << "Device Index: " << trackerIdx << std::endl;
         if (isConnected)
         {
+            auto getPropString = [&](auto desc, auto prop) { 
+                return desc + vtp::GetTrackedPropString(system_, trackerIdx, prop) + "\n"; 
+            };
             std::cout << "Connected!" << std::endl;
-            std::cout << "TrackingSystemName: " << vtp::GetTrackedPropString(system_, trackerIdx, Prop_TrackingSystemName_String);
-            std::cout << "TrackingSystemName: " << vtp::GetTrackedPropString(system_, trackerIdx, Prop_TrackingSystemName_String);
+            std::cout << getPropString("TrackingSystemName: ", Prop_TrackingSystemName_String);
+            std::cout << getPropString("ModelNumber: ",        Prop_ModelNumber_String );
+            std::cout << getPropString("SerialNumber: ",       Prop_SerialNumber_String);
         }
         else
         {
             std::cout << "Error:Not connected!" << std::endl;
         }
-            std::cout << "Done!" << std::endl;
-        
+            std::cout << "--------------" << std::endl;
     }
 
 
