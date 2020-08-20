@@ -5,11 +5,12 @@
 
 namespace vtp
 {
-    void FindTrackedDevicesOfClass(vr::IVRSystem* system_, const vr::TrackedDeviceClass& lookForClass, std::vector<vr::TrackedDeviceIndex_t>& validIndices)
+    // Returns indices of valid tracked devices of class @lookForClass
+    void FindTrackedDevicesOfClass(vr::IVRSystem* system, const vr::TrackedDeviceClass& lookForClass, std::vector<vr::TrackedDeviceIndex_t>& validIndices)
     {
         for (vr::TrackedDeviceIndex_t idx = 0; idx < vr::k_unMaxTrackedDeviceCount; idx++)
         {
-            auto trackedDeviceClass = system_->GetTrackedDeviceClass(idx);
+            auto trackedDeviceClass = system->GetTrackedDeviceClass(idx);
             if (trackedDeviceClass == lookForClass)
             {
                 validIndices.push_back(idx);
@@ -17,10 +18,10 @@ namespace vtp
             }
         }
     }
-    // Returns a string 
-    std::string GetTrackedPropString(vr::IVRSystem* system_, vr::TrackedDeviceIndex_t unDeviceIndex, vr::TrackedDeviceProperty prop)
+    // Returns a std::string of a trackedDevice property
+    std::string GetTrackedPropString(vr::IVRSystem* system, vr::TrackedDeviceIndex_t unDeviceIndex, vr::TrackedDeviceProperty prop)
     {
-        if (!system_) 
+        if (!system) 
             return std::string();
 
         const uint32_t bufSize = vr::k_unMaxPropertyStringSize;
@@ -29,7 +30,7 @@ namespace vtp
         std::string propString = "";
         vr::TrackedPropertyError pError = vr::TrackedPropertyError::TrackedProp_NotYetAvailable;
 
-        system_->GetStringTrackedDeviceProperty(unDeviceIndex, prop, *pchValue.get(), bufSize, &pError);
+        system->GetStringTrackedDeviceProperty(unDeviceIndex, prop, *pchValue.get(), bufSize, &pError);
 
         if (pError != vr::TrackedPropertyError::TrackedProp_Success)
         {
@@ -48,17 +49,18 @@ namespace vtp
     // [X2 Y2 Z2 P2]
     // [X3 Y3 Z3 P3]
     // Where P is position vector
-    std::string matrix34toString(vr::HmdMatrix34_t& m)
+    std::string HmdMatrix34ToString(vr::HmdMatrix34_t& m)
     {
         // Returns m.m[col][row] followed by a comma
         auto mn = [&](auto col, auto row) { return std::to_string(m.m[col][row]) + ","; };
         return
-            mn(0, 0) + mn(0, 1) + mn(0, 2) + mn(0, 3) + "\n" +
-            mn(1, 0) + mn(1, 1) + mn(1, 2) + mn(1, 3) + "\n" +
-            mn(2, 0) + mn(2, 1) + mn(2, 2) + mn(2, 3) + "\n" +
-            "0.0, 0.0, 0.0, 1.0";
+          "[" + mn(0, 0) + mn(0, 1) + mn(0, 2) + mn(0, 3) + "\n" +
+                mn(1, 0) + mn(1, 1) + mn(1, 2) + mn(1, 3) + "\n" +
+                mn(2, 0) + mn(2, 1) + mn(2, 2) + mn(2, 3) + "\n" +
+                "0.0, 0.0, 0.0, 1.0]";
     }
 
+    // Returns TrackedDevicePose_t struct of device# trackerIdx
     vr::TrackedDevicePose_t GetTrackedDevicePose(vr::IVRSystem* system_, vr::TrackedDeviceIndex_t& trackerIdx)
     {
         vr::VRControllerState_t state;
@@ -72,11 +74,12 @@ namespace vtp
         );
         if (!gotPose)
         {
-            std::cout << "Failed to get pose";
+            std::cerr << "Failed to get pose";
         }
         return pose;
     }
 
+    // Prints information about TrackedDevice pose
     void PrintTrackedDevicePose(vr::TrackedDevicePose_t& pose)
     {
         bool& poseValid = pose.bPoseIsValid;
@@ -84,7 +87,7 @@ namespace vtp
         if (poseValid)
         {
             // Print matrix
-            std::cout << "\n" + vtp::matrix34toString(pose.mDeviceToAbsoluteTracking) << std::endl;
+            std::cout << "\n" + vtp::HmdMatrix34ToString(pose.mDeviceToAbsoluteTracking) << std::endl;
         }
         else
         {
@@ -137,7 +140,7 @@ int main(int argc, char* argv)
             std::cout << getPropString("ModelNumber: ",        Prop_ModelNumber_String );
             std::cout << getPropString("SerialNumber: ",       Prop_SerialNumber_String);
 
-            // Print device poses
+            // Print device pose info
             auto pose = vtp::GetTrackedDevicePose(system_, trackerIdx);
             vtp::PrintTrackedDevicePose(pose);
         }
