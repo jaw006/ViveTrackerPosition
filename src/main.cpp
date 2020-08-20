@@ -3,7 +3,6 @@
 #include "openvr.h"
 #include "main.h"
 
-#define PRINTER(name) printer(#name, (name))
 namespace vtp
 {
     void FindTrackedDevicesOfClass(vr::IVRSystem* system_, const vr::TrackedDeviceClass& lookForClass, std::vector<vr::TrackedDeviceIndex_t>& validIndices)
@@ -59,15 +58,48 @@ namespace vtp
             mn(2, 0) + mn(2, 1) + mn(2, 2) + mn(2, 3) + "\n" +
             "0.0, 0.0, 0.0, 1.0";
     }
+
+    vr::TrackedDevicePose_t GetTrackedDevicePose(vr::IVRSystem* system_, vr::TrackedDeviceIndex_t& trackerIdx)
+    {
+        vr::VRControllerState_t state;
+        vr::TrackedDevicePose_t pose;
+        bool gotPose = system_->GetControllerStateWithPose(
+            vr::ETrackingUniverseOrigin::TrackingUniverseStanding,
+            trackerIdx,
+            &state,
+            1,
+            &pose
+        );
+        if (!gotPose)
+        {
+            std::cout << "Failed to get pose";
+        }
+        return pose;
+    }
+
+    void PrintTrackedDevicePose(vr::TrackedDevicePose_t& pose)
+    {
+        bool& poseValid = pose.bPoseIsValid;
+        std::cout << "Pose: ";
+        if (poseValid)
+        {
+            // Print matrix
+            std::cout << "\n" + vtp::matrix34toString(pose.mDeviceToAbsoluteTracking) << std::endl;
+        }
+        else
+        {
+            std::cout << "Invalid" << std::endl;
+        }
+    }
 }
 
 int main(int argc, char* argv)
 {
     using namespace vr;
-    //INIT Taken from OpenVR sample
+
+    //INIT -- Taken from OpenVR sample
     vr::EVRInitError eError = vr::VRInitError_None;
     vr::IVRSystem* system_ = vr::VR_Init( &eError, vr::VRApplication_Other);
-
     if ( eError != vr::VRInitError_None )
     {
         system_ = NULL;
@@ -76,9 +108,11 @@ int main(int argc, char* argv)
         return false;
     }
 
-    // Find generic trackers
-    std::vector<vr::TrackedDeviceIndex_t> genericTrackerIndices;
+    // Find generic trackers only
     vr::TrackedDeviceClass lookForClass = TrackedDeviceClass::TrackedDeviceClass_GenericTracker;
+
+    // Store found trackers in vector
+    std::vector<vr::TrackedDeviceIndex_t> genericTrackerIndices;
     vtp::FindTrackedDevicesOfClass(system_, lookForClass, genericTrackerIndices);
     if (genericTrackerIndices.empty())
     {
@@ -94,6 +128,7 @@ int main(int argc, char* argv)
         std::cout << "Device Index: " << trackerIdx << std::endl;
         if (isConnected)
         {
+            // Print property strings
             auto getPropString = [&](auto desc, auto prop) { 
                 return desc + vtp::GetTrackedPropString(system_, trackerIdx, prop) + "\n"; 
             };
@@ -102,38 +137,20 @@ int main(int argc, char* argv)
             std::cout << getPropString("ModelNumber: ",        Prop_ModelNumber_String );
             std::cout << getPropString("SerialNumber: ",       Prop_SerialNumber_String);
 
-        // Get controller poses
-            vr::VRControllerState_t state;
-            vr::TrackedDevicePose_t pose;
-            bool gotPose = system_->GetControllerStateWithPose(
-                vr::ETrackingUniverseOrigin::TrackingUniverseStanding,
-                trackerIdx,
-                &state,
-                1,
-                &pose
-            );
-            if (!gotPose)
-            {
-                std::cout << "Failed to get pose";
-            }
-            else
-            {
-                std::cout << "PoseIsValid: " + std::to_string(pose.bPoseIsValid) << std::endl;
-                std::cout << "Pose:\n" + vtp::matrix34toString(pose.mDeviceToAbsoluteTracking) << std::endl;
-            }
+            // Print device poses
+            auto pose = vtp::GetTrackedDevicePose(system_, trackerIdx);
+            vtp::PrintTrackedDevicePose(pose);
         }
         else
         {
             std::cout << "Error:Not connected!" << std::endl;
         }
-            std::cout << "--------------" << std::endl;
+        std::cout << "--------------" << std::endl;
     }
-
-
 
 // SHUTDOWN
     vr::VR_Shutdown();
     system_ = NULL;
-
     return 0;
 }
+
